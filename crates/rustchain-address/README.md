@@ -6,6 +6,12 @@ A small, dependency-free Rust crate for parsing, validating, and normalizing Rus
 
 Applications should not pass unchecked wallet strings between API, CLI, and storage layers. `RtcAddress` validates the `RTC` prefix, exact payload length, and hexadecimal encoding once, then stores the address as a compact 20-byte value.
 
+## Scope
+
+This crate validates **RustChain wallet addresses** only: the `RTC` + 40-hexadecimal form derived from a public key (`RTC` + `sha256(pubkey)[:40]`, as produced by the `rustchain-wallet` crate).
+
+RustChain also uses other identifier forms that are **not** RTC hexadecimal addresses and are deliberately out of scope here. For example, human-readable miner IDs such as `n64-scott-unit1`, or lenient `RTC`-prefixed strings accepted by some bridge checks. Use this crate to validate payout and wallet addresses; do not assume that every account or miner identifier on the network is an `RTC` hexadecimal address.
+
 ## Usage
 
 ```rust

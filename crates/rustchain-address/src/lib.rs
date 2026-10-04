@@ -5,6 +5,17 @@
 //! a 40-character hexadecimal payload. This crate gives applications one strict type
 //! instead of passing unchecked strings around.
 //!
+//! # Scope
+//!
+//! This crate validates **RustChain wallet addresses** only: the `RTC` + 40-hexadecimal
+//! form derived from a public key (`RTC` + `sha256(pubkey)[:40]`, as produced by the
+//! `rustchain-wallet` crate). RustChain also uses other identifier forms that are *not*
+//! RTC hexadecimal addresses and are deliberately out of scope here. For example,
+//! human-readable miner IDs such as `n64-scott-unit1`, or lenient `RTC`-prefixed
+//! strings accepted by some bridge checks. Use this crate to validate payout and wallet
+//! addresses; do not assume that every account or miner identifier on the network is an
+//! `RTC` hexadecimal address.
+//!
 //! # Example
 //!
 //! ```
@@ -145,11 +156,17 @@ impl fmt::Display for AddressError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidLength { expected, actual } => {
-                write!(formatter, "invalid RTC address length: expected {expected}, got {actual}")
+                write!(
+                    formatter,
+                    "invalid RTC address length: expected {expected}, got {actual}"
+                )
             }
             Self::InvalidPrefix => formatter.write_str("invalid RTC address prefix: expected RTC"),
             Self::InvalidHex { index, byte } => {
-                write!(formatter, "invalid hexadecimal byte 0x{byte:02x} at index {index}")
+                write!(
+                    formatter,
+                    "invalid hexadecimal byte 0x{byte:02x} at index {index}"
+                )
             }
         }
     }
@@ -226,7 +243,10 @@ mod tests {
         let input = "RTC2fe3c33c77666ff76a1cd0999fd4466ee81250fg";
         assert!(matches!(
             RtcAddress::parse(input),
-            Err(AddressError::InvalidHex { index: 42, byte: b'g' })
+            Err(AddressError::InvalidHex {
+                index: 42,
+                byte: b'g'
+            })
         ));
     }
 
