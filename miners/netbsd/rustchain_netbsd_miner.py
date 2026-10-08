@@ -99,8 +99,10 @@ def _classify_family(machine):
     so the node sees the same family naming across ports.
     """
     machine = (machine or "").lower()
-    if machine in ("aarch64", "arm64", "evbarm", "aarch64eb"):
+    if machine in ("aarch64", "arm64", "aarch64eb"):
         return "ARM", "aarch64"
+    if machine == "evbarm":
+        return "ARM", "unknown"
     if machine in ("arm", "armv7", "armv6", "earmv7", "earmv6"):
         return "ARM", "armv7"
     if machine in ("ppc", "ppc64", "powerpc", "powerpc64", "macppc", "prep", "ofppc"):
@@ -119,9 +121,11 @@ def _classify_family(machine):
         return "S390", "s390"
     if machine.startswith("sh"):
         return "SuperH", machine
-    # x86 (amd64/i386) keeps the Linux miner defaults: family "x86",
-    # arch "modern". Unknown machines also keep the honest defaults.
-    return "x86", "modern"
+    if machine in ("amd64", "x86_64"):
+        return "x86", "amd64"
+    if machine in ("i386", "i486", "i586", "i686", "x86"):
+        return "x86", machine
+    return "unknown", "unknown"
 
 
 def _load_core_miner():
@@ -202,9 +206,9 @@ def _netbsd_get_mac_addresses(self):
                 macs.append(mac)
     if macs:
         return macs[:3]
-    # Delegate to the core miner's MAC probe (it ends in an honest sentinel
-    # when no real interface MAC is visible).
-    return self._core_class._get_mac_addresses(self)
+    # Do not let the Linux probe or its placeholder MAC stand in for a
+    # NetBSD measurement when no physical interface address was readable.
+    return []
 
 
 def _netbsd_get_hw_info(self):
@@ -214,8 +218,8 @@ def _netbsd_get_hw_info(self):
     Values that cannot be measured are reported as unknown/None rather than
     defaulted, because invented values are fingerprint fabrication.
     """
-    system = platform.system()
-    machine = platform.machine()
+    system = _netbsd_sysctl("kern.ostype")
+    machine = _netbsd_sysctl("hw.machine_arch") or _netbsd_sysctl("hw.machine")
     family, arch = _classify_family(machine)
 
     cpu = ""
@@ -228,20 +232,12 @@ def _netbsd_get_hw_info(self):
         cores = _parse_int(_netbsd_sysctl(key))
         if cores:
             break
-    if not cores:
-        cores = os.cpu_count()
 
     memory_bytes = None
     for key in MEMORY_SYSCTL_KEYS:
         memory_bytes = _parse_int(_netbsd_sysctl(key))
         if memory_bytes:
             break
-    if not memory_bytes:
-        try:
-            memory_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-        except (OSError, ValueError):
-            memory_bytes = None
-
     macs = self._get_mac_addresses()
 
     hw = {
@@ -254,10 +250,10 @@ def _netbsd_get_hw_info(self):
         # "not a primary supported platform" warning does not apply.
         "probe_warning": "",
         "cpu": cpu or "Unknown",
-        "cores": cores or 1,
+        "cores": cores,
         "memory_gb": round(memory_bytes / (1024 ** 3), 1) if memory_bytes else None,
         "macs": macs,
-        "mac": macs[0] if macs else "00:00:00:00:00:01",
+        "mac": macs[0] if macs else None,
     }
     self.hw_info = hw
     return hw
@@ -350,6 +346,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
 

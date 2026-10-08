@@ -36,7 +36,7 @@ the hardware probes with NetBSD-native lookups so every attested value is
 |---|---|
 | OS | `sysctl -n kern.ostype` (must be `NetBSD`) |
 | CPU model | `sysctl -n machdep.cpu_model` (fallback `machdep.cpu_brand_string`) |
-| Architecture | `sysctl -n hw.machine` (`amd64`, `evbarm`, `sparc64`, ...) |
+| Architecture | `sysctl -n hw.machine_arch`, falling back to `hw.machine` only when unavailable |
 | Cores | `sysctl -n hw.ncpuonline` (fallback `hw.ncpu`) |
 | Memory | `sysctl -n hw.physmem64` (fallback `hw.physmem`, then `sysconf`) |
 | MAC addresses | `ifconfig <iface>` (`address:` lines) |
@@ -60,9 +60,11 @@ curl -sSL https://raw.githubusercontent.com/Scottcjn/Rustchain/main/install-mine
 **Targeted:** NetBSD 9.x / 10.x on `amd64`; the sysctl probes used are
 present on all NetBSD ports (`evbarm`, `sparc64`, `macppc`, ...).
 
-**Detected device family:** determined honestly from `sysctl hw.machine` at
-runtime (e.g. an amd64 machine reports `family=x86`, `arch=modern` exactly
-like the Linux miner does for `x86_64`). Nothing is hardcoded per platform.
+**Detected device family:** derived from the measured NetBSD machine
+architecture (for example, `amd64` reports `family=x86`, `arch=amd64`). The
+port does not infer a machine age or multiplier from its architecture. An
+unrecognized architecture is reported as `unknown`; unavailable core, memory,
+and MAC readings remain unknown or empty rather than receiving placeholders.
 
 ## Configuration
 
@@ -88,8 +90,10 @@ tail -f /var/log/rustchain/miner.log   # View logs
 
 ```sh
 pkgin -y install python311 py311-requests py311-pynacl
-cd /path/to/Rustchain/miners/netbsd
-/usr/pkg/bin/python3.11 rustchain_netbsd_miner.py --wallet your-wallet-name
+cd /path/to/Rustchain
+/usr/pkg/bin/python3.11 -m py_compile miners/netbsd/rustchain_netbsd_miner.py
+/usr/pkg/bin/python3.11 miners/netbsd/rustchain_netbsd_miner.py --test-only
+/usr/pkg/bin/python3.11 miners/netbsd/rustchain_netbsd_miner.py --wallet your-wallet-name
 ```
 
 From a repository checkout, the client finds the Linux miner core at
