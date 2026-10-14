@@ -1,31 +1,11 @@
-name: RustChain Tip Bot
-
+name: tip-bot.yml (DISABLED - billing protection)
 on:
-  issue_comment:
-    types: [created]
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  process-tip:
+  disabled:
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    if: contains(github.event.comment.body, '/tip')
     steps:
-      - uses: actions/checkout@v7
-      
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests PyYAML
-      
-      - name: Process tip command
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TIP_BOT_WALLET: ${{ secrets.TIP_BOT_WALLET }}
-          TIP_BOT_ADMINS: ${{ secrets.TIP_BOT_ADMINS }}
-        run: |
-          python integrations/rustchain-bounties/tip_bot_action.py
-        continue-on-error: true
+      - run: echo 'Disabled by repository owner to prevent GitHub Actions charges'
